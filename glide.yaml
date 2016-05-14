@@ -1,0 +1,15 @@
+package: .
+import:
+- package: github.com/elastic/beats
+  version: d8ca37efa8888ce624e2cfaa90107e79fd41be1e
+  subpackages:
+  - libbeat/beat
+  - libbeat/cfgfile
+  - libbeat/common
+  - libbeat/logp
+- package: github.com/go-sql-driver/mysql
+  version: 1421caf44f6464fd2ee8de694c7508ee13f92964
+- package: github.com/denisenkom/go-mssqldb
+  version: 8d4984e8baccbf5bfadd7f7e366fd61b7ccac38b
+- package: github.com/lib/pq
+  version: ee1442bda7bd1b6a84e913bdb421cb1874ec629d

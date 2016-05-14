@@ -1,0 +1,10 @@
+/.idea
+/vendor
+/build
+
+.DS_Store
+/sqlbeat
+/sqlbeat.test
+*.pyc
+
+dev-tools/packer/build/*

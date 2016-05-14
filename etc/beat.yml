@@ -1,0 +1,45 @@
+################### Sqlbeat Configuration Example #########################
+
+############################# Sqlbeat ######################################
+
+sqlbeat:
+  # Defines how often an event is sent to the output
+  #period: 10s
+
+  # Defines the DB type you are connecting, currently supporting 'mysql' / 'mssql' / 'postgres'
+  #dbtype: "mysql"
+
+  # Defines the sql hostname that the beat will connect to
+  #hostname: "127.0.0.1"
+
+  # Defines the sql port - leave commented for default ports
+  #port: "3306"
+
+  # MAKE SURE THE USER ONLY HAS PERMISSIONS TO RUN THE QUERY DESIRED AND NOTHING ELSE.
+  # Defines the mysql user to use
+  #username: "sqlbeat_user"
+
+  # Defines the mysql password to use - option #1 - plain text
+  #password: "sqlbeat_pass"
+
+  # Defines the mysql password to use - option #2 - AES encryption (see github.com/adibendahan/mysqlbeat-password-encrypter)
+  #encryptedpassword: "2321f38819cf693951e88f00cd82"
+  
+  # Defines the database to connect, optional for all except DB type postgres
+  #database: "sqlbeat"
+
+  # Defines SSL mode for postgres
+  #postgressslmode: "disable"
+
+  # Defines the queries that will run  - the query below is an example
+  #queries: [ "select * from tbl"]
+
+  # Defines the queries result types
+  # 'single-row' will be translated as columnname:value
+  # 'two-columns' will be translated as value-column1:value-column2 for each row
+  # 'multiple-rows' each row will be a document (with columnname:value)
+  # 'show-slave-delay' will only send the `Seconds_Behind_Master` column from SHOW SLAVE STATUS (for MySQL use)
+  #querytypes: ["multiple-rows"]
+
+  # Colums that end with the following wild card will report only delta in seconds ((neval - oldval)/timediff.Seconds())
+  #deltawildcard: "__DELTA"

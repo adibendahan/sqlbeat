@@ -1,5 +1,5 @@
 # Sqlbeat
-Fully customizable Beat for [My/MS/P]SQL servers - this beat can ship the results of any query defined on the config file to Elastic.
+Fully customizable Beat for MySQL/Microsoft SQL Server/PostgreSQL servers - this beat can ship the results of any query defined on the config file to Elastic.
 
 
 ## Current status
@@ -7,7 +7,7 @@ Sqlbeat still on beta.
 
 ## Features
 
-* Connect to MySQl / Microsoft SQL Server / PostgreSQL and run queries
+* Connect to MySQL / Microsoft SQL Server / PostgreSQL and run queries
  * `single-row` queries will be translated as columnname:value.
  * `two-columns` will be translated as value-column1:value-column2 for each row.
  * `multiple-rows` each row will be a document (with columnname:value) - no DELTA support.

@@ -5,6 +5,13 @@ Fully customizable Beat for MySQL/Microsoft SQL Server/PostgreSQL servers - this
 ## Current status
 Sqlbeat still on beta.
 
+#### To Do:
+* Add SSPI support for MSSQL
+* Add support for Oracle
+* Add support for SQLite
+* (Thinking about it) Add option to save connection string in the config file - will open support for all [SQLDrivers](https://github.com/golang/go/wiki/SQLDrivers).
+
+
 ## Features
 
 * Connect to MySQL / Microsoft SQL Server / PostgreSQL and run queries

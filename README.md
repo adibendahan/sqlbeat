@@ -1,5 +1,5 @@
 # Sqlbeat
-Fully customizable Beat for MySQL/Microsoft SQL Server/PostgreSQL servers - this beat can ship the results of any query defined on the config file to Elastic.
+Fully customizable Beat for MySQL/Microsoft SQL Server/PostgreSQL servers - this beat can ship the results of any query defined on the config file to Elasticsearch.
 
 
 ## Current status

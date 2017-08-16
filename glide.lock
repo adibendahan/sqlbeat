@@ -1,64 +1,123 @@
-hash: c25b967c363782a3b4b2345052ddea3e6f60ef669fc3bfcac59d286cfe0e27b9
-updated: 2017-08-16T09:09:51.265084406-04:00
+hash: f07a47307563834c802ae0639116bc3cafb901efb66a48205e86460eff077694
+updated: 2017-08-16T10:08:59.739742805-04:00
 imports:
-- name: github.com/adibendahan/sqlbeat
-  version: 81444a04be1a72e3b946c07c47a9a9a183ff114c
+- name: github.com/davecgh/go-spew
+  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
-  - beater
-  - config
+  - spew
 - name: github.com/denisenkom/go-mssqldb
   version: 8d4984e8baccbf5bfadd7f7e366fd61b7ccac38b
-- name: github.com/dustin/go-humanize
-  version: 8929fe90cee4b2cb9deb468b51fb34eba64d1bf0
 - name: github.com/eapache/go-resiliency
   version: b86b1ec0dd4209a588dc1285cdd471e73525c0b3
   subpackages:
   - breaker
+- name: github.com/eapache/go-xerial-snappy
+  version: bb955e01b9346ac19dc29eb16586c90ded99a98c
 - name: github.com/eapache/queue
   version: ded5959c0d4e360646dc9e9908cff48666781367
 - name: github.com/elastic/beats
-  version: d8ca37efa8888ce624e2cfaa90107e79fd41be1e
+  version: ffb035697fb3f8c0718aff81d68b7f9eddc91d09
   subpackages:
   - libbeat/beat
   - libbeat/cfgfile
   - libbeat/common
+  - libbeat/common/dtfmt
+  - libbeat/common/file
+  - libbeat/common/fmtstr
+  - libbeat/common/jsontransform
+  - libbeat/common/match
+  - libbeat/common/op
   - libbeat/common/streambuf
+  - libbeat/dashboards/dashboards
   - libbeat/logp
+  - libbeat/monitoring
+  - libbeat/monitoring/adapter
   - libbeat/outputs
+  - libbeat/outputs/codecs/format
+  - libbeat/outputs/codecs/json
   - libbeat/outputs/console
   - libbeat/outputs/elasticsearch
   - libbeat/outputs/fileout
   - libbeat/outputs/kafka
   - libbeat/outputs/logstash
   - libbeat/outputs/mode
+  - libbeat/outputs/mode/lb
+  - libbeat/outputs/mode/modeutil
+  - libbeat/outputs/mode/single
+  - libbeat/outputs/outil
   - libbeat/outputs/redis
+  - libbeat/outputs/transport
+  - libbeat/paths
+  - libbeat/plugin
+  - libbeat/processors
+  - libbeat/processors/actions
+  - libbeat/processors/add_cloud_metadata
   - libbeat/publisher
   - libbeat/service
+  - metricbeat/schema
+  - metricbeat/schema/mapstriface
+- name: github.com/elastic/go-lumber
+  version: 616041e345fc33c97bc0eb0fa6b388aa07bca3e1
+  subpackages:
+  - client/v2
+  - lj
+  - log
+  - protocol/v2
+  - server/internal
+  - server/v2
+- name: github.com/elastic/go-ucfg
+  version: ec8488a52542c0c51e42e8ea204dcaff400bc644
+  subpackages:
+  - cfgutil
+  - flag
+  - internal/parse
+  - json
+  - yaml
 - name: github.com/garyburd/redigo
   version: 8873b2f1995f59d4bcdd2b0dc9858e2cb9bf0c13
   subpackages:
   - internal
   - redis
 - name: github.com/go-sql-driver/mysql
-  version: 1421caf44f6464fd2ee8de694c7508ee13f92964
+  version: a0583e0143b1624142adab07e0e97fe106d99561
 - name: github.com/golang/snappy
-  version: 894fd4616c897c201d223c3c0c128e8c648c96a2
+  version: d9eb7a3d35ec988b8585d4a0068e462c27d28380
+- name: github.com/joeshaw/multierror
+  version: 69b34d4ec901851247ae7e77d33909caf9df99ed
+- name: github.com/klauspost/compress
+  version: 006acde2c5d283d2f8b8aa03d8f0cd2891c680cf
+  subpackages:
+  - flate
+  - zlib
+- name: github.com/klauspost/cpuid
+  version: 09cded8978dc9e80714c4d85b0322337b0a1e5e0
 - name: github.com/klauspost/crc32
-  version: 6973dcf6594efa905c08260fe9120cae92ab4305
+  version: 19b0b332c9e4516a6370a0456e6182c3b5036720
 - name: github.com/lib/pq
   version: ee1442bda7bd1b6a84e913bdb421cb1874ec629d
   subpackages:
   - oid
+- name: github.com/mitchellh/hashstructure
+  version: b098c52ef6beab8cd82bc4a32422cf54b890e8fa
 - name: github.com/nranchev/go-libGeoIP
   version: c78e8bd2dd3599feb21fd30886043979e82fe948
+- name: github.com/pierrec/lz4
+  version: 5c9560bfa9ace2bf86080bf40d46b34ae44604df
+- name: github.com/pierrec/xxHash
+  version: 5a004441f897722c627870a981d02b29924215fa
+  subpackages:
+  - xxHash32
+- name: github.com/pkg/errors
+  version: 01fa4104b9c248c8945d14d9f128454d5b28d595
+- name: github.com/rcrowley/go-metrics
+  version: ab2277b1c5d15c3cba104e9cbddbdfc622df5ad8
+  subpackages:
+  - exp
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/Shopify/sarama
-  version: 4ba9bba6adb6697bcec3841e1ecdfecf5227c3b9
-- name: github.com/urso/ucfg
-  version: 60c5618c1d445e97c3c52d738dbc887d68af76a5
-  subpackages:
-  - yaml
+  version: f0996189c86dc27338468f2a9b10077c6d572b34
+  repo: https://github.com/urso/sarama
 - name: golang.org/x/crypto
   version: 7f7c0c2d75ebb4e32a21396ce36e87b6dadc91c9
   subpackages:
@@ -66,6 +125,9 @@ imports:
 - name: golang.org/x/net
   version: d58ca6618b994150e624f6888d871f4709db51a0
   subpackages:
+  - icmp
+  - ipv4
+  - ipv6
   - proxy
   - publicsuffix
 - name: golang.org/x/sys

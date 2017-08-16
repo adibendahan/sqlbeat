@@ -1,0 +1,79 @@
+hash: c25b967c363782a3b4b2345052ddea3e6f60ef669fc3bfcac59d286cfe0e27b9
+updated: 2017-08-16T09:09:51.265084406-04:00
+imports:
+- name: github.com/adibendahan/sqlbeat
+  version: 81444a04be1a72e3b946c07c47a9a9a183ff114c
+  subpackages:
+  - beater
+  - config
+- name: github.com/denisenkom/go-mssqldb
+  version: 8d4984e8baccbf5bfadd7f7e366fd61b7ccac38b
+- name: github.com/dustin/go-humanize
+  version: 8929fe90cee4b2cb9deb468b51fb34eba64d1bf0
+- name: github.com/eapache/go-resiliency
+  version: b86b1ec0dd4209a588dc1285cdd471e73525c0b3
+  subpackages:
+  - breaker
+- name: github.com/eapache/queue
+  version: ded5959c0d4e360646dc9e9908cff48666781367
+- name: github.com/elastic/beats
+  version: d8ca37efa8888ce624e2cfaa90107e79fd41be1e
+  subpackages:
+  - libbeat/beat
+  - libbeat/cfgfile
+  - libbeat/common
+  - libbeat/common/streambuf
+  - libbeat/logp
+  - libbeat/outputs
+  - libbeat/outputs/console
+  - libbeat/outputs/elasticsearch
+  - libbeat/outputs/fileout
+  - libbeat/outputs/kafka
+  - libbeat/outputs/logstash
+  - libbeat/outputs/mode
+  - libbeat/outputs/redis
+  - libbeat/publisher
+  - libbeat/service
+- name: github.com/garyburd/redigo
+  version: 8873b2f1995f59d4bcdd2b0dc9858e2cb9bf0c13
+  subpackages:
+  - internal
+  - redis
+- name: github.com/go-sql-driver/mysql
+  version: 1421caf44f6464fd2ee8de694c7508ee13f92964
+- name: github.com/golang/snappy
+  version: 894fd4616c897c201d223c3c0c128e8c648c96a2
+- name: github.com/klauspost/crc32
+  version: 6973dcf6594efa905c08260fe9120cae92ab4305
+- name: github.com/lib/pq
+  version: ee1442bda7bd1b6a84e913bdb421cb1874ec629d
+  subpackages:
+  - oid
+- name: github.com/nranchev/go-libGeoIP
+  version: c78e8bd2dd3599feb21fd30886043979e82fe948
+- name: github.com/satori/go.uuid
+  version: 879c5887cd475cd7864858769793b2ceb0d44feb
+- name: github.com/Shopify/sarama
+  version: 4ba9bba6adb6697bcec3841e1ecdfecf5227c3b9
+- name: github.com/urso/ucfg
+  version: 60c5618c1d445e97c3c52d738dbc887d68af76a5
+  subpackages:
+  - yaml
+- name: golang.org/x/crypto
+  version: 7f7c0c2d75ebb4e32a21396ce36e87b6dadc91c9
+  subpackages:
+  - md4
+- name: golang.org/x/net
+  version: d58ca6618b994150e624f6888d871f4709db51a0
+  subpackages:
+  - proxy
+  - publicsuffix
+- name: golang.org/x/sys
+  version: 62bee037599929a6e9146f29d10dd5208c43507d
+  subpackages:
+  - windows
+  - windows/svc
+  - windows/svc/debug
+- name: gopkg.in/yaml.v2
+  version: a83829b6f1293c91addabc89d0571c246397bbf4
+testImports: []

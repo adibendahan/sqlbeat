@@ -11,11 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adibendahan/sqlbeat/config"
 	"github.com/elastic/beats/libbeat/beat"
 	"github.com/elastic/beats/libbeat/cfgfile"
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/libbeat/logp"
+	"github.com/elastic/beats/libbeat/publisher"
+
+	"github.com/adibendahan/sqlbeat/config"
 
 	// sql go drivers
 	_ "github.com/denisenkom/go-mssqldb"
@@ -25,8 +27,10 @@ import (
 
 // Sqlbeat is a struct to hold the beat config & info
 type Sqlbeat struct {
-	beatConfig      *config.Config
 	done            chan struct{}
+	config      		config.Config
+	client 					publisher.Client
+
 	period          time.Duration
 	dbType          string
 	hostname        string
@@ -61,14 +65,14 @@ const (
 	dbtPSQL  = "postgres"
 
 	// default values
-	defaultPeriod        = "10s"
-	defaultHostname      = "127.0.0.1"
+	// defaultPeriod        = "10s"
+	// defaultHostname      = "127.0.0.1"
 	defaultPortMySQL     = "3306"
 	defaultPortMSSQL     = "1433"
 	defaultPortPSQL      = "5432"
-	defaultUsername      = "sqlbeat_user"
-	defaultPassword      = "sqlbeat_pass"
-	defaultDeltaWildcard = "__DELTA"
+	// defaultUsername      = "sqlbeat_user"
+	// defaultPassword      = "sqlbeat_pass"
+	// defaultDeltaWildcard = "__DELTA"
 
 	// query types values
 	queryTypeSingleRow    = "single-row"
@@ -86,19 +90,28 @@ const (
 )
 
 // New Creates beater
-func New() *Sqlbeat {
-	return &Sqlbeat{
+func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
+	logp.Info(">>> sqlbeat.New()")
+	config := config.DefaultConfig
+	// Sort out configuration?
+	// Will need to return error if bad config or other init prob?
+	
+	bt := &Sqlbeat{
 		done: make(chan struct{}),
+		config: config,
 	}
+
+	return bt, nil
 }
 
 ///*** Beater interface methods ***///
 
 // Config is a function to read config file
 func (bt *Sqlbeat) Config(b *beat.Beat) error {
+	logp.Info(">>> sqlbeat.Config()")
 
 	// Load beater beatConfig
-	err := cfgfile.Read(&bt.beatConfig, "")
+	err := cfgfile.Read(&bt.config, "")
 	if err != nil {
 		return fmt.Errorf("Error reading config file: %v", err)
 	}
@@ -107,10 +120,17 @@ func (bt *Sqlbeat) Config(b *beat.Beat) error {
 }
 
 // Setup is a function to setup all beat config & info into the beat struct
+// What calls this function?  It seems to be part of an older interface.
+// The new IF is:
+// 	 New(), Run() and Stop() only?
+// Older members include:
+//   Config(), Setup() and Cleanup()?
+// When are these called?
 func (bt *Sqlbeat) Setup(b *beat.Beat) error {
+	logp.Info(">>> sqlbeat.Setup()")
 
 	// Config errors handling
-	switch bt.beatConfig.Sqlbeat.DBType {
+	switch bt.config.DBType {
 	case dbtMSSQL, dbtMySQL, dbtPSQL:
 		break
 	default:
@@ -118,82 +138,82 @@ func (bt *Sqlbeat) Setup(b *beat.Beat) error {
 		return err
 	}
 
-	if len(bt.beatConfig.Sqlbeat.Queries) < 1 {
+	if len(bt.config.Queries) < 1 {
 		err := fmt.Errorf("There are no queries to execute")
 		return err
 	}
 
-	if len(bt.beatConfig.Sqlbeat.Queries) != len(bt.beatConfig.Sqlbeat.QueryTypes) {
+	if len(bt.config.Queries) != len(bt.config.QueryTypes) {
 		err := fmt.Errorf("Config file error, queries != queryTypes array length (each query should have a corresponding type on the same index)")
 		return err
 	}
 
-	if bt.beatConfig.Sqlbeat.DBType == dbtPSQL {
-		if bt.beatConfig.Sqlbeat.Database == "" {
+	if bt.config.DBType == dbtPSQL {
+		if bt.config.Database == "" {
 			err := fmt.Errorf("Database must be selected when using DB type postgres")
 			return err
 		}
-		if bt.beatConfig.Sqlbeat.PostgresSSLMode == "" {
+		if bt.config.PostgresSSLMode == "" {
 			err := fmt.Errorf("PostgresSSLMode must be selected when using DB type postgres")
 			return err
 		}
 	}
 
-	// Setting defaults for missing config
-	if bt.beatConfig.Sqlbeat.Period == "" {
-		logp.Info("Period not selected, proceeding with '%v' as default", defaultPeriod)
-		bt.beatConfig.Sqlbeat.Period = defaultPeriod
-	}
+	// // Setting defaults for missing config
+	// if bt.config.Period == "" {
+	// 	logp.Info("Period not selected, proceeding with '%v' as default", defaultPeriod)
+	// 	bt.config.Period = defaultPeriod
+	// }
 
-	if bt.beatConfig.Sqlbeat.Hostname == "" {
-		logp.Info("Hostname not selected, proceeding with '%v' as default", defaultHostname)
-		bt.beatConfig.Sqlbeat.Hostname = defaultHostname
-	}
+	// if bt.config.Hostname == "" {
+	// 	logp.Info("Hostname not selected, proceeding with '%v' as default", defaultHostname)
+	// 	bt.config.Hostname = defaultHostname
+	// }
 
-	if bt.beatConfig.Sqlbeat.Port == "" {
-		switch bt.beatConfig.Sqlbeat.DBType {
+	if bt.config.Port == "" {
+		switch bt.config.DBType {
 		case dbtMSSQL:
-			bt.beatConfig.Sqlbeat.Port = defaultPortMSSQL
+			bt.config.Port = defaultPortMSSQL
 		case dbtMySQL:
-			bt.beatConfig.Sqlbeat.Port = defaultPortMySQL
+			bt.config.Port = defaultPortMySQL
 		case dbtPSQL:
-			bt.beatConfig.Sqlbeat.Port = defaultPortPSQL
+			bt.config.Port = defaultPortPSQL
 		}
-		logp.Info("Port not selected, proceeding with '%v' as default", bt.beatConfig.Sqlbeat.Port)
+		logp.Info("Port not selected, proceeding with '%v' as default", bt.config.Port)
 	}
 
-	if bt.beatConfig.Sqlbeat.Username == "" {
-		logp.Info("Username not selected, proceeding with '%v' as default", defaultUsername)
-		bt.beatConfig.Sqlbeat.Username = defaultUsername
-	}
+	// if bt.config.Username == "" {
+	// 	logp.Info("Username not selected, proceeding with '%v' as default", defaultUsername)
+	// 	bt.config.Username = defaultUsername
+	// }
 
-	if bt.beatConfig.Sqlbeat.Password == "" && bt.beatConfig.Sqlbeat.EncryptedPassword == "" {
-		logp.Info("Password not selected, proceeding with default password")
-		bt.beatConfig.Sqlbeat.Password = defaultPassword
-	}
+	// if bt.config.Password == "" && bt.config.EncryptedPassword == "" {
+	// 	logp.Info("Password not selected, proceeding with default password")
+	// 	bt.config.Password = defaultPassword
+	// }
 
-	if bt.beatConfig.Sqlbeat.DeltaWildcard == "" {
-		logp.Info("DeltaWildcard not selected, proceeding with '%v' as default", defaultDeltaWildcard)
-		bt.beatConfig.Sqlbeat.DeltaWildcard = defaultDeltaWildcard
-	}
+	// if bt.config.DeltaWildcard == "" {
+	// 	logp.Info("DeltaWildcard not selected, proceeding with '%v' as default", defaultDeltaWildcard)
+	// 	bt.config.DeltaWildcard = defaultDeltaWildcard
+	// }
 
-	// Parse the Period string
-	var durationParseError error
-	bt.period, durationParseError = time.ParseDuration(bt.beatConfig.Sqlbeat.Period)
-	if durationParseError != nil {
-		return durationParseError
-	}
+	// // Parse the Period string
+	// var durationParseError error
+	// bt.period, durationParseError = time.ParseDuration(bt.config.Period)
+	// if durationParseError != nil {
+	// 	return durationParseError
+	// }
 
 	// Handle password decryption and save in the bt
-	if bt.beatConfig.Sqlbeat.Password != "" {
-		bt.password = bt.beatConfig.Sqlbeat.Password
-	} else if bt.beatConfig.Sqlbeat.EncryptedPassword != "" {
+	if bt.config.Password != "" {
+		bt.password = bt.config.Password
+	} else if bt.config.EncryptedPassword != "" {
 		aesCipher, err := aes.NewCipher([]byte(secret))
 		if err != nil {
 			return err
 		}
 		cfbDecrypter := cipher.NewCFBDecrypter(aesCipher, commonIV)
-		chiperText, err := hex.DecodeString(bt.beatConfig.Sqlbeat.EncryptedPassword)
+		chiperText, err := hex.DecodeString(bt.config.EncryptedPassword)
 		if err != nil {
 			return err
 		}
@@ -207,15 +227,15 @@ func (bt *Sqlbeat) Setup(b *beat.Beat) error {
 	bt.oldValuesAge = common.MapStr{"sqlbeat": "init"}
 
 	// Save config values to the bt
-	bt.dbType = bt.beatConfig.Sqlbeat.DBType
-	bt.hostname = bt.beatConfig.Sqlbeat.Hostname
-	bt.port = bt.beatConfig.Sqlbeat.Port
-	bt.username = bt.beatConfig.Sqlbeat.Username
-	bt.database = bt.beatConfig.Sqlbeat.Database
-	bt.postgresSSLMode = bt.beatConfig.Sqlbeat.PostgresSSLMode
-	bt.queries = bt.beatConfig.Sqlbeat.Queries
-	bt.queryTypes = bt.beatConfig.Sqlbeat.QueryTypes
-	bt.deltaWildcard = bt.beatConfig.Sqlbeat.DeltaWildcard
+	bt.dbType = bt.config.DBType
+	bt.hostname = bt.config.Hostname
+	bt.port = bt.config.Port
+	bt.username = bt.config.Username
+	bt.database = bt.config.Database
+	bt.postgresSSLMode = bt.config.PostgresSSLMode
+	bt.queries = bt.config.Queries
+	bt.queryTypes = bt.config.QueryTypes
+	bt.deltaWildcard = bt.config.DeltaWildcard
 
 	logp.Info("Total # of queries to execute: %d", len(bt.queries))
 	for index, queryStr := range bt.queries {
@@ -225,10 +245,11 @@ func (bt *Sqlbeat) Setup(b *beat.Beat) error {
 	return nil
 }
 
-// Run is a functions that runs the beat
+// Run is a function that runs the beat
 func (bt *Sqlbeat) Run(b *beat.Beat) error {
 	logp.Info("sqlbeat is running! Hit CTRL-C to stop it.")
 
+	bt.client = b.Publisher.Connect()
 	ticker := time.NewTicker(bt.period)
 	for {
 		select {
@@ -244,13 +265,14 @@ func (bt *Sqlbeat) Run(b *beat.Beat) error {
 	}
 }
 
-// Cleanup is a function that does nothing on this beat :)
-func (bt *Sqlbeat) Cleanup(b *beat.Beat) error {
-	return nil
-}
+// // Cleanup is a function that does nothing on this beat :)
+// func (bt *Sqlbeat) Cleanup(b *beat.Beat) error {
+// 	return nil
+// }
 
 // Stop is a function that runs once the beat is stopped
 func (bt *Sqlbeat) Stop() {
+	bt.client.Close()
 	close(bt.done)
 }
 
@@ -318,7 +340,8 @@ LoopQueries:
 				if err != nil {
 					logp.Err("Query #%v error generating event from rows: %v", index, err)
 				} else if event != nil {
-					b.Events.PublishEvent(event)
+					// b.Events.PublishEvent(event)
+					bt.client.PublishEvent(event)
 					logp.Info("%v event sent", bt.queryTypes[index])
 				}
 				// breaking after the first row
@@ -332,7 +355,8 @@ LoopQueries:
 					logp.Err("Query #%v error generating event from rows: %v", index, err)
 					break LoopRows
 				} else if event != nil {
-					b.Events.PublishEvent(event)
+					// b.Events.PublishEvent(event)
+					bt.client.PublishEvent(event)
 					logp.Info("%v event sent", bt.queryTypes[index])
 				}
 
@@ -355,7 +379,8 @@ LoopQueries:
 
 		// If the two-columns event has data, publish it
 		if bt.queryTypes[index] == queryTypeTwoColumns && len(twoColumnEvent) > 2 {
-			b.Events.PublishEvent(twoColumnEvent)
+			//b.Events.PublishEvent(twoColumnEvent)
+			bt.client.PublishEvent(twoColumnEvent)
 			logp.Info("%v event sent", queryTypeTwoColumns)
 			twoColumnEvent = nil
 		}

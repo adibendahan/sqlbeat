@@ -3,12 +3,10 @@
 
 package config
 
-type Config struct {
-	Sqlbeat SqlbeatConfig
-}
+import "time"
 
-type SqlbeatConfig struct {
-	Period            string   `yaml:"period"`
+type Config struct {
+	Period            time.Duration   `config:"period"`
 	DBType            string   `yaml:"dbtype"`
 	Hostname          string   `yaml:"hostname"`
 	Port              string   `yaml:"port"`
@@ -20,4 +18,13 @@ type SqlbeatConfig struct {
 	Queries           []string `yaml:"queries"`
 	QueryTypes        []string `yaml:"querytypes"`
 	DeltaWildcard     string   `yaml:"deltawildcard"`
+}
+
+var DefaultConfig = Config{
+	Period: 10 * time.Second,
+	DBType: "",
+	Hostname: "127.0.0.1",
+	Username: "sqlbeat_user",
+	Password: "sqlbeat_pass",
+	DeltaWildcard: "__DELTA",
 }

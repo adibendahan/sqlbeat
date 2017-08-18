@@ -11,11 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adibendahan/sqlbeat/config"
 	"github.com/elastic/beats/libbeat/beat"
-	"github.com/elastic/beats/libbeat/cfgfile"
+	// "github.com/elastic/beats/libbeat/cfgfile"
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/libbeat/logp"
+	"github.com/elastic/beats/libbeat/publisher"
+
+	"github.com/adibendahan/sqlbeat/config"
 
 	// sql go drivers
 	_ "github.com/denisenkom/go-mssqldb"
@@ -25,20 +27,9 @@ import (
 
 // Sqlbeat is a struct to hold the beat config & info
 type Sqlbeat struct {
-	beatConfig      *config.Config
 	done            chan struct{}
-	period          time.Duration
-	dbType          string
-	hostname        string
-	port            string
-	username        string
-	password        string
-	passwordAES     string
-	database        string
-	postgresSSLMode string
-	queries         []string
-	queryTypes      []string
-	deltaWildcard   string
+	config      		config.Config
+	client 					publisher.Client
 
 	oldValues    common.MapStr
 	oldValuesAge common.MapStr
@@ -60,15 +51,9 @@ const (
 	dbtMSSQL = "mssql"
 	dbtPSQL  = "postgres"
 
-	// default values
-	defaultPeriod        = "10s"
-	defaultHostname      = "127.0.0.1"
 	defaultPortMySQL     = "3306"
 	defaultPortMSSQL     = "1433"
 	defaultPortPSQL      = "5432"
-	defaultUsername      = "sqlbeat_user"
-	defaultPassword      = "sqlbeat_pass"
-	defaultDeltaWildcard = "__DELTA"
 
 	// query types values
 	queryTypeSingleRow    = "single-row"
@@ -86,31 +71,47 @@ const (
 )
 
 // New Creates beater
-func New() *Sqlbeat {
-	return &Sqlbeat{
-		done: make(chan struct{}),
+func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
+	logp.Info(">>> New()")
+
+	config := config.DefaultConfig
+	if err := cfg.Unpack(&config); err != nil {
+		return nil, fmt.Errorf("Error reading config file: %v", err)
 	}
+	
+	
+	logp.Info("  Config = \n%+v\n", config)
+	bt := &Sqlbeat{
+		done: make(chan struct{}),
+		config: config,
+	}
+
+	if err := bt.Setup(b); err != nil {
+		return nil, fmt.Errorf("Error validating config file: %v", err)		
+	}
+
+	return bt, nil
 }
 
 ///*** Beater interface methods ***///
 
 // Config is a function to read config file
-func (bt *Sqlbeat) Config(b *beat.Beat) error {
+// func (bt *Sqlbeat) Config(b *beat.Beat) error {
 
-	// Load beater beatConfig
-	err := cfgfile.Read(&bt.beatConfig, "")
-	if err != nil {
-		return fmt.Errorf("Error reading config file: %v", err)
-	}
+// 	// Load beater beatConfig
+// 	err := cfgfile.Read(&bt.config, "")
+// 	if err != nil {
+// 		return fmt.Errorf("Error reading config file: %v", err)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
-// Setup is a function to setup all beat config & info into the beat struct
+// Setup is a function to validate
 func (bt *Sqlbeat) Setup(b *beat.Beat) error {
-
+	logp.Info(">>> Setup()")
 	// Config errors handling
-	switch bt.beatConfig.Sqlbeat.DBType {
+	switch bt.config.DBType {
 	case dbtMSSQL, dbtMySQL, dbtPSQL:
 		break
 	default:
@@ -118,118 +119,78 @@ func (bt *Sqlbeat) Setup(b *beat.Beat) error {
 		return err
 	}
 
-	if len(bt.beatConfig.Sqlbeat.Queries) < 1 {
+	if len(bt.config.Queries) < 1 {
 		err := fmt.Errorf("There are no queries to execute")
 		return err
 	}
 
-	if len(bt.beatConfig.Sqlbeat.Queries) != len(bt.beatConfig.Sqlbeat.QueryTypes) {
+	if len(bt.config.Queries) != len(bt.config.QueryTypes) {
 		err := fmt.Errorf("Config file error, queries != queryTypes array length (each query should have a corresponding type on the same index)")
 		return err
 	}
 
-	if bt.beatConfig.Sqlbeat.DBType == dbtPSQL {
-		if bt.beatConfig.Sqlbeat.Database == "" {
+	if bt.config.DBType == dbtPSQL {
+		if bt.config.Database == "" {
 			err := fmt.Errorf("Database must be selected when using DB type postgres")
 			return err
 		}
-		if bt.beatConfig.Sqlbeat.PostgresSSLMode == "" {
+		if bt.config.PostgresSSLMode == "" {
 			err := fmt.Errorf("PostgresSSLMode must be selected when using DB type postgres")
 			return err
 		}
 	}
 
-	// Setting defaults for missing config
-	if bt.beatConfig.Sqlbeat.Period == "" {
-		logp.Info("Period not selected, proceeding with '%v' as default", defaultPeriod)
-		bt.beatConfig.Sqlbeat.Period = defaultPeriod
-	}
-
-	if bt.beatConfig.Sqlbeat.Hostname == "" {
-		logp.Info("Hostname not selected, proceeding with '%v' as default", defaultHostname)
-		bt.beatConfig.Sqlbeat.Hostname = defaultHostname
-	}
-
-	if bt.beatConfig.Sqlbeat.Port == "" {
-		switch bt.beatConfig.Sqlbeat.DBType {
+	if bt.config.Port == "" {
+		switch bt.config.DBType {
 		case dbtMSSQL:
-			bt.beatConfig.Sqlbeat.Port = defaultPortMSSQL
+			bt.config.Port = defaultPortMSSQL
 		case dbtMySQL:
-			bt.beatConfig.Sqlbeat.Port = defaultPortMySQL
+			bt.config.Port = defaultPortMySQL
 		case dbtPSQL:
-			bt.beatConfig.Sqlbeat.Port = defaultPortPSQL
+			bt.config.Port = defaultPortPSQL
 		}
-		logp.Info("Port not selected, proceeding with '%v' as default", bt.beatConfig.Sqlbeat.Port)
+		logp.Info("Port not selected, proceeding with '%v' as default", bt.config.Port)
 	}
 
-	if bt.beatConfig.Sqlbeat.Username == "" {
-		logp.Info("Username not selected, proceeding with '%v' as default", defaultUsername)
-		bt.beatConfig.Sqlbeat.Username = defaultUsername
-	}
-
-	if bt.beatConfig.Sqlbeat.Password == "" && bt.beatConfig.Sqlbeat.EncryptedPassword == "" {
-		logp.Info("Password not selected, proceeding with default password")
-		bt.beatConfig.Sqlbeat.Password = defaultPassword
-	}
-
-	if bt.beatConfig.Sqlbeat.DeltaWildcard == "" {
-		logp.Info("DeltaWildcard not selected, proceeding with '%v' as default", defaultDeltaWildcard)
-		bt.beatConfig.Sqlbeat.DeltaWildcard = defaultDeltaWildcard
-	}
-
-	// Parse the Period string
-	var durationParseError error
-	bt.period, durationParseError = time.ParseDuration(bt.beatConfig.Sqlbeat.Period)
-	if durationParseError != nil {
-		return durationParseError
-	}
 
 	// Handle password decryption and save in the bt
-	if bt.beatConfig.Sqlbeat.Password != "" {
-		bt.password = bt.beatConfig.Sqlbeat.Password
-	} else if bt.beatConfig.Sqlbeat.EncryptedPassword != "" {
+	// if bt.config.Password != "" {
+	// 	bt.password = bt.config.Password
+	// } else 
+	 if bt.config.EncryptedPassword != "" {
 		aesCipher, err := aes.NewCipher([]byte(secret))
 		if err != nil {
 			return err
 		}
 		cfbDecrypter := cipher.NewCFBDecrypter(aesCipher, commonIV)
-		chiperText, err := hex.DecodeString(bt.beatConfig.Sqlbeat.EncryptedPassword)
+		chiperText, err := hex.DecodeString(bt.config.EncryptedPassword)
 		if err != nil {
 			return err
 		}
 		plaintextCopy := make([]byte, len(chiperText))
 		cfbDecrypter.XORKeyStream(plaintextCopy, chiperText)
-		bt.password = string(plaintextCopy)
+		bt.config.Password = string(plaintextCopy)
 	}
 
 	// init the oldValues and oldValuesAge array
 	bt.oldValues = common.MapStr{"sqlbeat": "init"}
 	bt.oldValuesAge = common.MapStr{"sqlbeat": "init"}
 
-	// Save config values to the bt
-	bt.dbType = bt.beatConfig.Sqlbeat.DBType
-	bt.hostname = bt.beatConfig.Sqlbeat.Hostname
-	bt.port = bt.beatConfig.Sqlbeat.Port
-	bt.username = bt.beatConfig.Sqlbeat.Username
-	bt.database = bt.beatConfig.Sqlbeat.Database
-	bt.postgresSSLMode = bt.beatConfig.Sqlbeat.PostgresSSLMode
-	bt.queries = bt.beatConfig.Sqlbeat.Queries
-	bt.queryTypes = bt.beatConfig.Sqlbeat.QueryTypes
-	bt.deltaWildcard = bt.beatConfig.Sqlbeat.DeltaWildcard
-
-	logp.Info("Total # of queries to execute: %d", len(bt.queries))
-	for index, queryStr := range bt.queries {
-		logp.Info("Query #%d (type: %s): %s", index+1, bt.queryTypes[index], queryStr)
+	logp.Info("Total # of queries to execute: %d", len(bt.config.Queries))
+	for index, queryStr := range bt.config.Queries {
+		logp.Info("Query #%d (type: %s): %s", index+1, bt.config.QueryTypes[index], queryStr)
 	}
 
 	return nil
 }
 
-// Run is a functions that runs the beat
+// Run is a function that runs the beat
 func (bt *Sqlbeat) Run(b *beat.Beat) error {
 	logp.Info("sqlbeat is running! Hit CTRL-C to stop it.")
 
-	ticker := time.NewTicker(bt.period)
+	bt.client = b.Publisher.Connect()
+	logp.Info("Connected; ticker period is %v", bt.config.Period)
+	ticker := time.NewTicker(bt.config.Period)
 	for {
 		select {
 		case <-bt.done:
@@ -244,13 +205,10 @@ func (bt *Sqlbeat) Run(b *beat.Beat) error {
 	}
 }
 
-// Cleanup is a function that does nothing on this beat :)
-func (bt *Sqlbeat) Cleanup(b *beat.Beat) error {
-	return nil
-}
 
 // Stop is a function that runs once the beat is stopped
 func (bt *Sqlbeat) Stop() {
+	bt.client.Close()
 	close(bt.done)
 }
 
@@ -261,21 +219,21 @@ func (bt *Sqlbeat) beat(b *beat.Beat) error {
 
 	connString := ""
 
-	switch bt.dbType {
+	switch bt.config.DBType {
 	case dbtMSSQL:
 		connString = fmt.Sprintf("server=%v;user id=%v;password=%v;port=%v;database=%v",
-			bt.hostname, bt.username, bt.password, bt.port, bt.database)
+			bt.config.Hostname, bt.config.Username, bt.config.Password, bt.config.Port, bt.config.Database)
 
 	case dbtMySQL:
 		connString = fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
-			bt.username, bt.password, bt.hostname, bt.port, bt.database)
+			bt.config.Username, bt.config.Password, bt.config.Hostname, bt.config.Port, bt.config.Database)
 
 	case dbtPSQL:
 		connString = fmt.Sprintf("%v://%v:%v@%v:%v/%v?sslmode=%v",
-			dbtPSQL, bt.username, bt.password, bt.hostname, bt.port, bt.database, bt.postgresSSLMode)
+			dbtPSQL, bt.config.Username, bt.config.Password, bt.config.Hostname, bt.config.Port, bt.config.Database, bt.config.PostgresSSLMode)
 	}
 
-	db, err := sql.Open(bt.dbType, connString)
+	db, err := sql.Open(bt.config.DBType, connString)
 	if err != nil {
 		return err
 	}
@@ -285,7 +243,7 @@ func (bt *Sqlbeat) beat(b *beat.Beat) error {
 	var twoColumnEvent common.MapStr
 
 LoopQueries:
-	for index, queryStr := range bt.queries {
+	for index, queryStr := range bt.config.Queries {
 		// Log the query run time and run the query
 		dtNow := time.Now()
 		rows, err := db.Query(queryStr)
@@ -300,40 +258,42 @@ LoopQueries:
 		}
 
 		// Populate the two-columns event
-		if bt.queryTypes[index] == queryTypeTwoColumns {
+		if bt.config.QueryTypes[index] == queryTypeTwoColumns {
 			twoColumnEvent = common.MapStr{
 				"@timestamp": common.Time(dtNow),
-				"type":       bt.dbType,
+				"type":       bt.config.DBType,
 			}
 		}
 
 	LoopRows:
 		for rows.Next() {
 
-			switch bt.queryTypes[index] {
+			switch bt.config.QueryTypes[index] {
 			case queryTypeSingleRow, queryTypeSlaveDelay:
 				// Generate an event from the current row
-				event, err := bt.generateEventFromRow(rows, columns, bt.queryTypes[index], dtNow)
+				event, err := bt.generateEventFromRow(rows, columns, bt.config.QueryTypes[index], dtNow)
 
 				if err != nil {
 					logp.Err("Query #%v error generating event from rows: %v", index, err)
 				} else if event != nil {
-					b.Events.PublishEvent(event)
-					logp.Info("%v event sent", bt.queryTypes[index])
+					// b.Events.PublishEvent(event)
+					bt.client.PublishEvent(event)
+					logp.Info("%v event sent", bt.config.QueryTypes[index])
 				}
 				// breaking after the first row
 				break LoopRows
 
 			case queryTypeMultipleRows:
 				// Generate an event from the current row
-				event, err := bt.generateEventFromRow(rows, columns, bt.queryTypes[index], dtNow)
+				event, err := bt.generateEventFromRow(rows, columns, bt.config.QueryTypes[index], dtNow)
 
 				if err != nil {
 					logp.Err("Query #%v error generating event from rows: %v", index, err)
 					break LoopRows
 				} else if event != nil {
-					b.Events.PublishEvent(event)
-					logp.Info("%v event sent", bt.queryTypes[index])
+					// b.Events.PublishEvent(event)
+					bt.client.PublishEvent(event)
+					logp.Info("%v event sent", bt.config.QueryTypes[index])
 				}
 
 				// Move to the next row
@@ -354,8 +314,8 @@ LoopQueries:
 		}
 
 		// If the two-columns event has data, publish it
-		if bt.queryTypes[index] == queryTypeTwoColumns && len(twoColumnEvent) > 2 {
-			b.Events.PublishEvent(twoColumnEvent)
+		if bt.config.QueryTypes[index] == queryTypeTwoColumns && len(twoColumnEvent) > 2 {
+			bt.client.PublishEvent(twoColumnEvent)
 			logp.Info("%v event sent", queryTypeTwoColumns)
 			twoColumnEvent = nil
 		}
@@ -410,7 +370,7 @@ func (bt *Sqlbeat) appendRowToEvent(event common.MapStr, row *sql.Rows, columns 
 	}
 
 	// If the column name ends with the deltaWildcard
-	if strings.HasSuffix(strColName, bt.deltaWildcard) {
+	if strings.HasSuffix(strColName, bt.config.DeltaWildcard) {
 		var exists bool
 		_, exists = bt.oldValues[strColName]
 
@@ -503,7 +463,7 @@ func (bt *Sqlbeat) generateEventFromRow(row *sql.Rows, columns []string, queryTy
 	// Create the event and populate it
 	event := common.MapStr{
 		"@timestamp": common.Time(rowAge),
-		"type":       bt.dbType,
+		"type":       bt.config.DBType,
 	}
 
 	// Get RawBytes from data
@@ -540,7 +500,7 @@ func (bt *Sqlbeat) generateEventFromRow(row *sql.Rows, columns []string, queryTy
 		}
 
 		// If query type is single row and the column name ends with the deltaWildcard
-		if queryType == queryTypeSingleRow && strings.HasSuffix(strColName, bt.deltaWildcard) {
+		if queryType == queryTypeSingleRow && strings.HasSuffix(strColName, bt.config.DeltaWildcard) {
 			var exists bool
 			_, exists = bt.oldValues[strColName]
 

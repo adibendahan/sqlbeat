@@ -1,5 +1,7 @@
-BEATNAME=sqlbeat
-BEAT_DIR=github.com/adibendahan
+BEAT_NAME=sqlbeat
+BEAT_PATH=github.com/adibendahan/sqlbeat
+BEAT_GOPATH=$(firstword $(subst :, ,${GOPATH}))
+BEAT_URL=https://${BEAT_PATH}
 SYSTEM_TESTS=false
 TEST_ENVIRONMENT=false
 ES_BEATS=./vendor/github.com/elastic/beats
@@ -9,30 +11,28 @@ PREFIX?=.
 # Path to the libbeat Makefile
 -include $(ES_BEATS)/libbeat/scripts/Makefile
 
-.PHONY: init
-init:
-	glide update  --no-recursive
+# Initial beat setup
+.PHONY: setup
+setup: copy-vendor
 	make update
-	git init
 
-.PHONY: commit
-commit:
-	git add README.md CONTRIBUTING.md
-	git commit -m "Initial commit"
-	git add LICENSE
-	git commit -m "Add the LICENSE"
-	git add .gitignore .gitattributes
-	git commit -m "Add git settings"
-	git add .
-	git reset -- .travis.yml
-	git commit -m "Add sqlbeat"
-	git add .travis.yml
-	git commit -m "Add Travis CI"
+# .PHONY: init
+# init:
+# 	glide update  --no-recursive
+# 	make update
+# 	git init
 
-.PHONY: update-deps
-update-deps:
-	glide update  --no-recursive
+# Copy beats into vendor directory
+.PHONY: copy-vendor
+copy-vendor:
+	mkdir -p vendor/github.com/elastic/
+	-cp -R ${BEAT_GOPATH}/src/github.com/elastic/beats vendor/github.com/elastic/
+	rm -rf vendor/github.com/elastic/beats/.git
 
 # This is called by the beats packer before building starts
 .PHONY: before-build
 before-build:
+
+# Collects all dependencies and then calls update
+.PHONY: collect
+collect:

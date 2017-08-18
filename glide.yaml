@@ -1,14 +1,17 @@
-package: .
+package: github.com/adibendahan/sqlbeat
 import:
 - package: github.com/elastic/beats
-  version: d8ca37efa8888ce624e2cfaa90107e79fd41be1e
+  # This guid  refs a 5.0.0_SNAPSHOT -- let's use a semantic version instead
+  #version: d8ca37efa8888ce624e2cfaa90107e79fd41be1e
+  version: ~5.5.1
   subpackages:
   - libbeat/beat
   - libbeat/cfgfile
   - libbeat/common
   - libbeat/logp
 - package: github.com/go-sql-driver/mysql
-  version: 1421caf44f6464fd2ee8de694c7508ee13f92964
+  version: ~1.3.0
+  #version: 1421caf44f6464fd2ee8de694c7508ee13f92964
 - package: github.com/denisenkom/go-mssqldb
   version: 8d4984e8baccbf5bfadd7f7e366fd61b7ccac38b
 - package: github.com/lib/pq

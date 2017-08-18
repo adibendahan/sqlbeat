@@ -3,21 +3,30 @@
 
 package config
 
+import "time"
+
 type Config struct {
-	Sqlbeat SqlbeatConfig
+	Period            time.Duration   `config:"period"`
+	DBType            string   `config:"dbtype"`
+	Hostname          string   `config:"hostname"`
+	Port              string   `config:"port"`
+	Username          string   `config:"username"`
+	Password          string   `config:"password"`
+	EncryptedPassword string   `config:"encryptedpassword"`
+	Database          string   `config:"database"`
+	PostgresSSLMode   string   `config:"postgressslmode"`
+	Queries           []string `config:"queries"`
+	QueryTypes        []string `config:"querytypes"`
+	DeltaWildcard     string   `config:"deltawildcard"`
 }
 
-type SqlbeatConfig struct {
-	Period            string   `yaml:"period"`
-	DBType            string   `yaml:"dbtype"`
-	Hostname          string   `yaml:"hostname"`
-	Port              string   `yaml:"port"`
-	Username          string   `yaml:"username"`
-	Password          string   `yaml:"password"`
-	EncryptedPassword string   `yaml:"encryptedpassword"`
-	Database          string   `yaml:"database"`
-	PostgresSSLMode   string   `yaml:"postgressslmode"`
-	Queries           []string `yaml:"queries"`
-	QueryTypes        []string `yaml:"querytypes"`
-	DeltaWildcard     string   `yaml:"deltawildcard"`
+var DefaultConfig = Config{
+	Period: 10 * time.Second,
+	DBType: "",
+	Hostname: "127.0.0.1",
+	Username: "sqlbeat_user",
+	Password: "sqlbeat_pass",
+	Database: "",
+	PostgresSSLMode: "disable",
+	DeltaWildcard: "__DELTA",
 }
